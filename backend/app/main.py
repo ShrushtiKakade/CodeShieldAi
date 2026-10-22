@@ -2,12 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router as api_router
 from app.config import settings
+from app.storage.db import init_db
 
 app = FastAPI(
     title="CodeShield AI API",
-    description="Code security, Graphify blast radius, and Kimi/DigitalOcean AI inference",
+    description="Code security, Graphify blast radius, and Kimi AI Inference API",
     version="0.1.0",
 )
+
+# Initialize SQLite database schema
+init_db()
 
 # CORS configuration
 origins = [
@@ -32,11 +36,14 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/")
 def root():
+    provider = settings.get_resolved_provider()
     return {
         "service": "CodeShield AI",
         "version": "0.1.0",
         "docs_url": "/docs",
-        "health_check": "/api/health"
+        "health_check": "/api/health",
+        "ai_provider": provider,
+        "persistence": "SQLite"
     }
 
 

@@ -3,16 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ScanSearch, 
   CheckCircle2, 
-  AlertTriangle, 
   ArrowRight, 
   GitFork, 
-  Sparkles,
-  ShieldCheck,
-  FileCode2
+  ShieldAlert,
+  FileCode2,
+  FolderArchive
 } from 'lucide-react';
 import ScanForm from '../components/ScanForm';
 
-export default function NewScan({ onRunScan, isScanning, lastScanResult, onSelectFinding }) {
+export default function NewScan({ 
+  onRunScan, 
+  onUploadScan, 
+  isScanning, 
+  lastScanResult, 
+  onSelectFinding,
+  onCancelScan 
+}) {
   const navigate = useNavigate();
 
   return (
@@ -23,22 +29,30 @@ export default function NewScan({ onRunScan, isScanning, lastScanResult, onSelec
           <span>New Security & Impact Scan</span>
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Submit Python code or select a vulnerability preset. Our static engine discovers flaws and Graphify maps the downstream blast radius.
+          Paste Python code, select a vulnerability preset, or upload a project file/archive (.zip).
+          Code is analyzed statically in an isolated temporary workspace and never executed.
         </p>
       </div>
 
       {/* Main Scan Form */}
-      <ScanForm onStartScan={onRunScan} isScanning={isScanning} />
+      <ScanForm 
+        onStartScan={onRunScan} 
+        onUploadScan={onUploadScan}
+        isScanning={isScanning} 
+        onCancelScan={onCancelScan}
+      />
 
       {/* Post Scan Summary Banner if results exist */}
       {lastScanResult && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl animate-fade-in space-y-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
               <div>
                 <h3 className="font-bold text-white text-sm">Scan Completed Successfully</h3>
-                <p className="text-xs text-slate-400 font-mono">Scan ID: {lastScanResult.scan_id}</p>
+                <p className="text-xs text-slate-400 font-mono">
+                  Scan ID: {lastScanResult.scan_id} · Target: {lastScanResult.target_name || 'project'} ({lastScanResult.durationMs || lastScanResult.duration_ms || 400}ms)
+                </p>
               </div>
             </div>
 
@@ -77,9 +91,9 @@ export default function NewScan({ onRunScan, isScanning, lastScanResult, onSelec
               </span>
             </div>
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
-              <span className="text-slate-400 uppercase text-[10px] font-semibold block mb-0.5">Graph Nodes</span>
+              <span className="text-slate-400 uppercase text-[10px] font-semibold block mb-0.5">Graphify Nodes</span>
               <span className="font-mono text-purple-300 font-bold text-base">
-                {lastScanResult.impact?.nodes?.length || 8} mapped
+                {lastScanResult.impact?.nodes?.length || 4} elements mapped
               </span>
             </div>
           </div>
@@ -88,4 +102,3 @@ export default function NewScan({ onRunScan, isScanning, lastScanResult, onSelec
     </div>
   );
 }
-

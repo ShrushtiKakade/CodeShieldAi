@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -9,7 +9,13 @@ import Findings from './pages/Findings';
 import ImpactAnalysis from './pages/ImpactAnalysis';
 import ScanHistory from './pages/ScanHistory';
 import { mockFindings, mockImpactGraph } from './data/mockFindings';
-import { checkBackendHealth, submitScan, requestAiExplanation } from './services/api';
+import { 
+  checkBackendHealth, 
+  submitScan, 
+  uploadAndScan, 
+  fetchScanById, 
+  requestAiExplanation 
+} from './services/api';
 
 export default function App() {
   const [findings, setFindings] = useState(mockFindings);
@@ -18,49 +24,52 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [isRequestingAi, setIsRequestingAi] = useState(false);
   const [lastScanResult, setLastScanResult] = useState(null);
+  const [isLiveScan, setIsLiveScan] = useState(false);
+  const [targetProject, setTargetProject] = useState('user_service.py');
   const [backendStatus, setBackendStatus] = useState({ status: 'checking' });
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
+  const abortControllerRef = useRef(null);
 
-  // DigitalOcean Credit & Token Budget Tracker
+  // Kimi AI & Token Budget Tracker
   const [creditsBudget, setCreditsBudget] = useState({
     model: 'kimi-k3',
-    usedTokens: 1640,
-    callsMade: 6,
+    usedTokens: 1420,
+    callsMade: 5,
     maxTokens: 5000,
     autoAiEnabled: false,
     cacheEnabled: true
   });
 
-  // Check backend health on initial load
+  // Verify backend health on initial load
   useEffect(() => {
     async function verifyHealth() {
       const res = await checkBackendHealth();
       setBackendStatus(res);
+      if (res.models?.digitalocean) {
+        setCreditsBudget(prev => ({
+          ...prev,
+          model: res.ai_provider === 'kimi_direct' ? res.models.kimi_direct : res.models.digitalocean
+        }));
+      }
     }
     verifyHealth();
   }, []);
 
-  const handleRunScan = async ({ sourceCode, language, includeImpact, includeAiExplanation }) => {
+  const handleRunScan = async ({ sourceCode, targetName, language, includeImpact, includeAiExplanation }) => {
     setIsScanning(true);
+    abortControllerRef.current = new AbortController();
+
     try {
       const result = await submitScan({
         sourceCode,
+        targetName: targetName || 'target_source.py',
         language,
         includeImpact,
         includeAiExplanation,
         model: creditsBudget.model
       });
 
-      if (result.findings && result.findings.length > 0) {
-        setFindings(result.findings);
-        setSelectedFinding(result.findings[0]);
-      }
-
-      if (result.impact && result.impact.nodes) {
-        setGraphData(result.impact);
-      }
-
-      setLastScanResult(result);
+      applyScanResult(result, targetName || 'target_source.py');
     } catch (err) {
       console.error('Scan error:', err);
     } finally {
@@ -68,25 +77,92 @@ export default function App() {
     }
   };
 
+  const handleUploadScan = async ({ file, language, includeImpact, includeAiExplanation }) => {
+    setIsScanning(true);
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const result = await uploadAndScan({
+        file,
+        language,
+        includeImpact,
+        includeAiExplanation,
+        model: creditsBudget.model,
+        abortSignal: abortControllerRef.current.signal
+      });
+
+      applyScanResult(result, file.name);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        alert(`Upload scan failed: ${err.message}`);
+      }
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleCancelScan = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsScanning(false);
+  };
+
+  const applyScanResult = (result, name) => {
+    if (result.findings && result.findings.length > 0) {
+      setFindings(result.findings);
+      setSelectedFinding(result.findings[0]);
+    } else {
+      setFindings([]);
+      setSelectedFinding(null);
+    }
+
+    if (result.impact && result.impact.nodes) {
+      setGraphData(result.impact);
+    }
+
+    setLastScanResult(result);
+    setIsLiveScan(!result.isDemo);
+    setTargetProject(name);
+  };
+
+  const handleOpenScan = async (scanId) => {
+    try {
+      const scan = await fetchScanById(scanId);
+      if (scan) {
+        applyScanResult(scan, scan.target_name || scan.target || scanId);
+      }
+    } catch (err) {
+      console.error('Failed to reopen scan:', err);
+    }
+  };
+
   const handleRequestAiExplanation = async (finding) => {
-    // Check token budget limit first to protect DO credits
     if (creditsBudget.usedTokens >= creditsBudget.maxTokens) {
-      alert(`DigitalOcean Credit Budget Reached (${creditsBudget.maxTokens} tokens). Please increase your session budget in Settings to continue making live inference calls.`);
+      alert(`Token budget reached (${creditsBudget.maxTokens} tokens). Please increase your session budget in Settings.`);
       return;
     }
 
     setIsRequestingAi(true);
     try {
-      const response = await requestAiExplanation(finding, finding.codeSnippet || '', creditsBudget.model);
+      const response = await requestAiExplanation(
+        finding, 
+        finding.codeSnippet || '', 
+        finding.impactNodes || [], 
+        creditsBudget.model
+      );
       
-      // Update finding with returned explanation & suggested fix
       const updatedFindings = findings.map(f => {
         if (f.id === finding.id) {
           return {
             ...f,
-            aiExplanation: response.explanation,
+            aiExplanation: response.risk,
+            risk: response.risk,
             aiFix: response.suggested_fix,
-            cached: response.cached || false
+            recommendedTests: response.recommended_tests,
+            uncertainty_notes: response.uncertainty_notes,
+            cached: response.cached || false,
+            aiProvider: response.provider
           };
         }
         return f;
@@ -95,12 +171,15 @@ export default function App() {
       setFindings(updatedFindings);
       setSelectedFinding(prev => ({
         ...prev,
-        aiExplanation: response.explanation,
+        aiExplanation: response.risk,
+        risk: response.risk,
         aiFix: response.suggested_fix,
-        cached: response.cached || false
+        recommendedTests: response.recommended_tests,
+        uncertainty_notes: response.uncertainty_notes,
+        cached: response.cached || false,
+        aiProvider: response.provider
       }));
 
-      // Increment token tracking
       if (!response.cached) {
         setCreditsBudget(prev => ({
           ...prev,
@@ -135,6 +214,7 @@ export default function App() {
         {/* Main Application Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <Topbar
+            currentProject={targetProject}
             isScanning={isScanning}
             onOpenOptimizer={() => setIsOptimizerOpen(true)}
             creditsBudget={creditsBudget}
@@ -150,6 +230,8 @@ export default function App() {
                     onSelectFinding={setSelectedFinding}
                     creditsBudget={creditsBudget}
                     onOpenOptimizer={() => setIsOptimizerOpen(true)}
+                    isLiveScan={isLiveScan}
+                    targetProject={targetProject}
                   />
                 }
               />
@@ -158,9 +240,11 @@ export default function App() {
                 element={
                   <NewScan
                     onRunScan={handleRunScan}
+                    onUploadScan={handleUploadScan}
                     isScanning={isScanning}
                     lastScanResult={lastScanResult}
                     onSelectFinding={setSelectedFinding}
+                    onCancelScan={handleCancelScan}
                   />
                 }
               />
@@ -189,13 +273,13 @@ export default function App() {
               />
               <Route
                 path="/history"
-                element={<ScanHistory />}
+                element={<ScanHistory onOpenScan={handleOpenScan} />}
               />
             </Routes>
           </main>
         </div>
 
-        {/* Credit Optimizer & DO Inference Modal */}
+        {/* Credit Optimizer & Model Settings Modal */}
         <CreditOptimizerModal
           isOpen={isOptimizerOpen}
           onClose={() => setIsOptimizerOpen(false)}

@@ -11,6 +11,8 @@ __pycache__/
 .venv/
 venv/
 .env
+*.db
+backend/data/*.db
 .pytest_cache/
 .coverage
 htmlcov/

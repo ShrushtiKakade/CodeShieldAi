@@ -3,15 +3,10 @@ import {
   X, 
   CloudLightning, 
   Zap, 
-  ShieldCheck, 
   Check, 
-  AlertTriangle, 
-  Database, 
-  Sliders, 
-  DollarSign, 
   Lock, 
   Sparkles,
-  RefreshCw
+  Info
 } from 'lucide-react';
 
 export default function CreditOptimizerModal({ 
@@ -22,7 +17,6 @@ export default function CreditOptimizerModal({
 }) {
   const [model, setModel] = useState(creditsBudget?.model || 'kimi-k3');
   const [maxTokens, setMaxTokens] = useState(creditsBudget?.maxTokens || 5000);
-  const [autoAiEnabled, setAutoAiEnabled] = useState(creditsBudget?.autoAiEnabled || false);
   const [cacheEnabled, setCacheEnabled] = useState(true);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -33,7 +27,6 @@ export default function CreditOptimizerModal({
     onUpdateBudget({
       model,
       maxTokens: Number(maxTokens),
-      autoAiEnabled,
       cacheEnabled
     });
     setSavedSuccess(true);
@@ -55,11 +48,11 @@ export default function CreditOptimizerModal({
 
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-400">
-            <CloudLightning className="w-6 h-6" />
+            <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">DigitalOcean Credit Optimizer</h3>
-            <p className="text-xs text-slate-400">Strict quota enforcement & token budgeting</p>
+            <h3 className="text-base font-bold text-white">Kimi AI & Cloud Inference Settings</h3>
+            <p className="text-xs text-slate-400">Token budgeting and provider configuration</p>
           </div>
         </div>
 
@@ -70,11 +63,11 @@ export default function CreditOptimizerModal({
             <span className="font-mono text-cyan-400 font-bold text-sm">{creditsBudget?.usedTokens || 0}</span>
           </div>
           <div>
-            <span className="text-slate-400 text-[10px] uppercase font-semibold block mb-0.5">Calls Made</span>
+            <span className="text-slate-400 text-[10px] uppercase font-semibold block mb-0.5">AI Requests</span>
             <span className="font-mono text-emerald-400 font-bold text-sm">{creditsBudget?.callsMade || 0}</span>
           </div>
           <div>
-            <span className="text-slate-400 text-[10px] uppercase font-semibold block mb-0.5">Savings Ratio</span>
+            <span className="text-slate-400 text-[10px] uppercase font-semibold block mb-0.5">Token Savings</span>
             <span className="font-mono text-purple-400 font-bold text-sm">~85%</span>
           </div>
         </div>
@@ -83,24 +76,24 @@ export default function CreditOptimizerModal({
           {/* Model selection */}
           <div>
             <label className="block text-slate-300 font-medium mb-1.5 flex items-center justify-between">
-              <span>Serverless Inference Model</span>
-              <span className="text-[10px] text-cyan-400 font-mono">DO Serverless URL: https://inference.do-ai.run</span>
+              <span>AI Provider & Model</span>
             </label>
             <select
               value={model}
               onChange={(e) => setModel(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-cyan-500"
             >
-              <option value="kimi-k3">Kimi K3 (kimi-k3) - Recommended for Code Reasoning & Economy</option>
-              <option value="llama-4-maverick">Llama 4 Maverick (llama-4-maverick) - Deep Multi-Turn Context</option>
+              <option value="kimi-k3">Kimi K3 (DigitalOcean Serverless Inference: https://inference.do-ai.run)</option>
+              <option value="moonshot-v1-8k">Direct Kimi / Moonshot API (moonshot-v1-8k via https://api.moonshot.ai)</option>
+              <option value="llama-4-maverick">Llama 4 Maverick (DigitalOcean Serverless Inference)</option>
             </select>
           </div>
 
           {/* Max Token Quota */}
           <div>
             <label className="block text-slate-300 font-medium mb-1.5 flex items-center justify-between">
-              <span>Max Session Token Budget</span>
-              <span className="font-mono text-slate-400">{maxTokens} tokens max</span>
+              <span>Session Token Budget</span>
+              <span className="font-mono text-cyan-400 font-semibold">{maxTokens} tokens limit</span>
             </label>
             <input
               type="range"
@@ -112,13 +105,13 @@ export default function CreditOptimizerModal({
               className="w-full accent-cyan-400"
             />
             <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
-              <span>1k tokens (Frugal)</span>
-              <span>10k tokens</span>
-              <span>20k tokens</span>
+              <span>1k (Budget)</span>
+              <span>10k</span>
+              <span>20k</span>
             </div>
           </div>
 
-          {/* Strict Credit Optimization Toggles */}
+          {/* Caching & Safeguards */}
           <div className="space-y-2.5 pt-2 border-t border-slate-800">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
@@ -128,29 +121,24 @@ export default function CreditOptimizerModal({
                 className="rounded bg-slate-950 border-slate-700 text-cyan-500 mt-0.5"
               />
               <div>
-                <span className="font-medium text-slate-200 block">Deduplicate & Cache Queries (Zero Token Re-runs)</span>
-                <span className="text-slate-400 text-[11px]">Uses SHA-256 fingerprint of finding, rule, and code slice to reuse responses.</span>
+                <span className="font-medium text-slate-200 block">SHA-256 Response Caching (Zero-Token Re-runs)</span>
+                <span className="text-slate-400 text-[11px]">Reuses identical finding explanations without making redundant external API calls.</span>
               </div>
             </label>
+          </div>
 
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!autoAiEnabled}
-                onChange={(e) => setAutoAiEnabled(!e.target.checked)}
-                className="rounded bg-slate-950 border-slate-700 text-cyan-500 mt-0.5"
-              />
-              <div>
-                <span className="font-medium text-slate-200 block">Strict On-Demand Only (Recommended)</span>
-                <span className="text-slate-400 text-[11px]">Only trigger DO AI when you click 'Explain with AI' on a specific finding.</span>
-              </div>
-            </label>
+          {/* Privacy Notice */}
+          <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
+            <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+            <p>
+              API Keys are stored exclusively on the backend in <code className="text-cyan-300">backend/.env</code> and never exposed to the browser or committed to Git.
+            </p>
           </div>
 
           {/* Save & Feedback */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-800">
             <span className="text-[11px] text-slate-400 flex items-center gap-1">
-              <Lock className="w-3 h-3 text-emerald-400" /> Keys stored in backend .env only
+              <Lock className="w-3 h-3 text-emerald-400" /> Keys Protected
             </span>
 
             <div className="flex items-center gap-2">
@@ -171,7 +159,7 @@ export default function CreditOptimizerModal({
                     <span>Saved!</span>
                   </>
                 ) : (
-                  <span>Save Configuration</span>
+                  <span>Save Settings</span>
                 )}
               </button>
             </div>
@@ -181,4 +169,3 @@ export default function CreditOptimizerModal({
     </div>
   );
 }
-

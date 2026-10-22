@@ -4,7 +4,8 @@ __pycache__/
 .venv/
 venv/
 .env
+*.db
+data/*.db
 .pytest_cache/
 uploads/
 temp_workspaces/
-
