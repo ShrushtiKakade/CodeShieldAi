@@ -37,7 +37,8 @@ class Settings(BaseSettings):
     port: int = 8000
     environment: str = "development"
     max_upload_size_mb: int = 10
-    max_extracted_files: int = 50
+    # Allow normal sized repositories while keeping archive extraction bounded.
+    max_extracted_files: int = 500
 
     model_config = SettingsConfigDict(
         env_file=".env",

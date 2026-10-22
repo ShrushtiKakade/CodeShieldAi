@@ -79,7 +79,7 @@ export async function submitGithubScan({
         include_ai_explanation: includeAiExplanation,
         model
       }),
-      signal: abortSignal || AbortSignal.timeout(30000)
+      signal: abortSignal || AbortSignal.timeout(90000)
     });
 
     if (!res.ok) {

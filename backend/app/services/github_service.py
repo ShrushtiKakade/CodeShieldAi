@@ -35,27 +35,35 @@ async def download_github_repository(
     if token and token.strip() and not token.startswith("your_"):
         headers["Authorization"] = f"Bearer {token.strip()}"
 
-    # Try official zipball endpoint
+    # Try official zipball endpoint or web archive endpoint
     branch_slug = f"/{branch}" if branch and branch.strip() else ""
-    primary_url = f"https://api.github.com/repos/{owner}/{repo}/zipball{branch_slug}"
-    fallback_url = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch or 'main'}.zip"
+    api_url = f"https://api.github.com/repos/{owner}/{repo}/zipball{branch_slug}"
+    web_archive_url = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch or 'main'}.zip"
+
+    # If token is provided, prioritize API url with bearer auth; otherwise prioritize public web archive
+    urls_to_try = [api_url, web_archive_url] if (token and token.strip()) else [web_archive_url, api_url]
 
     download_target = workspace_path / "temp_github_repo.zip"
-    total_bytes = 0
 
-    async with httpx.AsyncClient(follow_redirects=True, timeout=25.0) as client:
-        # Attempt primary URL
-        resp = await client.get(primary_url, headers=headers)
-        if resp.status_code != 200:
-            # Try fallback URL
-            resp = await client.get(fallback_url, headers=headers)
+    async with httpx.AsyncClient(follow_redirects=True, timeout=45.0) as client:
+        resp = None
+        for target_url in urls_to_try:
+            req_headers = headers if "api.github.com" in target_url else {k: v for k, v in headers.items() if k != "Accept"}
+            try:
+                resp = await client.get(target_url, headers=req_headers)
+                if resp.status_code == 200:
+                    break
+            except Exception:
+                continue
 
-        if resp.status_code == 404:
-            raise SecurityViolation(f"GitHub repository '{owner}/{repo}' (branch: '{branch or 'default'}') not found or private. Provide a GitHub token if private.")
-        elif resp.status_code == 401 or resp.status_code == 403:
-            raise SecurityViolation("GitHub API rate limit exceeded or invalid token. Please provide a GitHub Personal Access Token.")
-        elif resp.status_code != 200:
-            raise SecurityViolation(f"Failed to fetch repository from GitHub (HTTP {resp.status_code}).")
+        if not resp or resp.status_code != 200:
+            if resp and resp.status_code == 404:
+                raise SecurityViolation(f"GitHub repository '{owner}/{repo}' (branch: '{branch or 'default'}') not found or private. Provide a GitHub token if private.")
+            elif resp and (resp.status_code == 401 or resp.status_code == 403):
+                raise SecurityViolation("GitHub API rate limit exceeded or invalid token. Please provide a GitHub Personal Access Token.")
+            else:
+                code_str = f"HTTP {resp.status_code}" if resp else "Connection failed"
+                raise SecurityViolation(f"Failed to fetch repository from GitHub ({code_str}).")
 
         # Stream write with size limit
         content = resp.content
@@ -141,3 +149,4 @@ async def get_github_repositories(token: Optional[str] = None) -> List[Dict[str,
         print(f"GitHub user repo fetch error: {e}")
 
     return featured
+

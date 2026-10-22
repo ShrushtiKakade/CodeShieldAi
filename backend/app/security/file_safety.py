@@ -5,10 +5,11 @@ import uuid
 import zipfile
 from pathlib import Path
 from typing import Tuple, List
+from app.config import settings
 
 MAX_SOURCE_LENGTH = 500000        # 500 KB limit for single snippets
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024 # 10 MB limit for archives
-MAX_EXTRACTED_FILES = 50
+MAX_EXTRACTED_FILES = settings.max_extracted_files
 ALLOWED_EXTENSIONS = {".py", ".txt"}
 
 
