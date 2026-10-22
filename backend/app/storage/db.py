@@ -122,3 +122,4 @@ def delete_scan(scan_id: str) -> bool:
         cursor.execute("DELETE FROM scans WHERE scan_id = ?", (scan_id,))
         conn.commit()
         return cursor.rowcount > 0
+

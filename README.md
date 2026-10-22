@@ -13,6 +13,19 @@
 4. **Security Fix Impact Advisor**: Inspects the proposed code fix against the Graphify call graph to suggest which connected components, routes, and tests need verification before merging.
 5. **Persistent Scan History**: Automatically stores scan records, findings, and graph topologies in a local SQLite database (`backend/data/codeshield.db`).
 6. **Protects Limited Cloud Credits**: Enforces strict on-demand inference, SHA-256 deduplication caching, and session token budgeting.
+7. **Visual Security Explainer (Beginner-Friendly)**: Interactive 4-step graphical flow breaking down how vulnerabilities occur, who is affected, worst-case consequences, everyday analogies, and interactive before/after shielded simulations for non-security users.
+
+---
+
+## 🎨 Visual Security Explainer
+
+For developers or stakeholders without a cybersecurity background, reading technical scanner outputs can be daunting. CodeShield AI introduces the **Visual Security Explainer**:
+
+- **Dual-Mode Interactive Simulation**:
+  - 🔓 **"How It Breaks" (Attack Flow)**: Step-by-step interactive pipeline tracing from the attacker's input origin, to the unshielded code flaw, to execution, and final data compromise.
+  - 🛡️ **"How We Shield It" (Defense Flow)**: Shows how parameterization and defense-in-depth neutralizes the threat, safely quarantining input data.
+- **Everyday Analogies**: Translates abstract vulnerabilities into relatable concepts (e.g., SQLi as *an altered bank check*, Command Injection as *handing a cashier a note with extra demands*, Hardcoded Secrets as *taping house keys to the doorknob*).
+- **Interactive Step Simulator**: Click through each step to inspect simulated data payloads, affected components, worst-case consequences, and the golden remediation rule.
 
 ---
 
@@ -159,17 +172,24 @@ Follow this step-by-step sequence to demo CodeShield AI:
    - The findings table lists detected issues sorted by severity.
    - Point out exact line numbers, OWASP categories (e.g. `A03:2021-Injection`), and rule IDs.
    - Highlight the **redacted secrets** in `sample-projects/vulnerable_app.py` preventing credential exposure.
-4. **Inspect the Graphify Blast Radius**:
+4. **Explore the Visual Security Explainer (Beginner-Friendly)**:
+   - Click any finding and view the **Visual Explainer** tab.
+   - Show the interactive 4-stage pipeline: Input Origin ➡️ Code Flaw ➡️ Database Execution ➡️ Data Leak.
+   - Toggle **"How We Shield It"** to show the defense flow and read the real-world analogy.
+5. **Inspect the Graphify Blast Radius**:
    - Click **Impact Graph** in the sidebar.
    - Demonstrate the interactive React Flow graph showing how public HTTP routes (`POST /api/users/profile`) call the vulnerable sink (`execute_user_query()`).
    - Note the clear distinction between **Verified Relationships** (direct AST calls) and **Inferred Relationships**.
-5. **Request On-Demand Kimi AI Reasoning**:
-   - Select a finding and click **Explain with Kimi**.
+6. **Request On-Demand Kimi AI Reasoning**:
+   - In Finding Details, switch to **Remediation & Evidence** and click **Explain with Kimi**.
    - Show the evidence summary, risk explanation, and proposed remediation code.
    - Point out the SHA-256 cache badge: clicking it again costs **0 tokens**.
-6. **Demonstrate Security Fix Impact Advisor**:
+7. **Demonstrate Security Fix Impact Advisor**:
    - Inside Finding Details, click the **Security Fix Impact Advisor** tab.
    - Click **Run Security Fix Impact Advisor**.
+   - Review the breaking change risk tier, connected callers requiring review, and recommended verification tests.
+8. **Verify Persistent Scan History**:
+   - Click **Scan History** to view the audit record persisted in SQLite (`backend/data/codeshield.db`). Reopen or delete historical scan records.
    - Review the breaking change risk tier, connected callers requiring review, and recommended verification tests.
 7. **Verify Persistent Scan History**:
    - Click **Scan History** in the sidebar.

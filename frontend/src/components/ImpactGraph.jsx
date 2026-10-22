@@ -140,7 +140,7 @@ export default function ImpactGraph({ graphData, onSelectNode, selectedNodeId })
           minZoom={0.2}
           maxZoom={1.8}
         >
-          <Background color="#1e293b" gap={20} size={1} />
+          <Background color="#dbe4ee" gap={20} size={1} />
           <Controls className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden fill-slate-300" />
         </ReactFlow>
 
@@ -209,4 +209,3 @@ export default function ImpactGraph({ graphData, onSelectNode, selectedNodeId })
     </div>
   );
 }
-

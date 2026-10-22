@@ -6,11 +6,12 @@ import {
   Search, 
   Filter, 
   CheckCircle2, 
-  Sparkles,
-  ChevronRight,
-  ArrowUpDown,
-  Lock,
-  Tag
+  Sparkles, 
+  ChevronRight, 
+  ArrowUpDown, 
+  Lock, 
+  Tag, 
+  Eye
 } from 'lucide-react';
 
 export default function FindingsTable({ findings = [], onSelectFinding, selectedFindingId, isDemoMode = false }) {
@@ -218,7 +219,13 @@ export default function FindingsTable({ findings = [], onSelectFinding, selected
 
                     {/* Title & Category */}
                     <td className="py-3.5 px-4 max-w-xs md:max-w-md">
-                      <div className="font-medium text-slate-200 truncate">{finding.title}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-200 truncate">{finding.title}</span>
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 shrink-0">
+                          <Eye className="w-2.5 h-2.5" />
+                          <span>Visual Flow</span>
+                        </span>
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="font-mono text-[10px] text-slate-400 truncate">
                           {finding.ruleId}

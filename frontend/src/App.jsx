@@ -208,7 +208,6 @@ export default function App() {
         <Sidebar
           backendStatus={backendStatus}
           onOpenOptimizer={() => setIsOptimizerOpen(true)}
-          creditsBudget={creditsBudget}
         />
 
         {/* Main Application Area */}
@@ -216,8 +215,6 @@ export default function App() {
           <Topbar
             currentProject={targetProject}
             isScanning={isScanning}
-            onOpenOptimizer={() => setIsOptimizerOpen(true)}
-            creditsBudget={creditsBudget}
           />
 
           <main className="flex-1 overflow-y-auto bg-slate-950">
@@ -228,8 +225,6 @@ export default function App() {
                   <Dashboard
                     findings={findings}
                     onSelectFinding={setSelectedFinding}
-                    creditsBudget={creditsBudget}
-                    onOpenOptimizer={() => setIsOptimizerOpen(true)}
                     isLiveScan={isLiveScan}
                     targetProject={targetProject}
                   />

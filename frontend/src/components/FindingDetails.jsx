@@ -17,10 +17,12 @@ import {
   GitPullRequest,
   CheckCircle2,
   RefreshCw,
-  Info
+  Info,
+  Eye
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { requestFixImpactAssessment } from '../services/api';
+import VisualSecurityExplainer from './VisualSecurityExplainer';
 
 export default function FindingDetails({ 
   finding, 
@@ -30,7 +32,7 @@ export default function FindingDetails({
   creditsBudget
 }) {
   const [copiedCode, setCopiedCode] = useState(false);
-  const [activeTab, setActiveTab] = useState('remediation'); // 'remediation' | 'impactAdvisor' | 'diff'
+  const [activeTab, setActiveTab] = useState('visual'); // 'visual' | 'remediation' | 'impactAdvisor' | 'diff'
   const [impactAssessment, setImpactAssessment] = useState(null);
   const [isAssessingImpact, setIsAssessingImpact] = useState(false);
   const navigate = useNavigate();
@@ -126,7 +128,19 @@ export default function FindingDetails({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-800 bg-slate-950/60 text-xs px-4">
+      <div className="flex flex-wrap border-b border-slate-800 bg-slate-950/60 text-xs px-4">
+        <button
+          onClick={() => setActiveTab('visual')}
+          className={`py-2.5 px-3 border-b-2 font-medium transition flex items-center gap-1.5 ${
+            activeTab === 'visual'
+              ? 'border-cyan-400 text-cyan-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Eye className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Visual Explainer</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-normal">Interactive</span>
+        </button>
         <button
           onClick={() => setActiveTab('remediation')}
           className={`py-2.5 px-3 border-b-2 font-medium transition ${
@@ -146,7 +160,7 @@ export default function FindingDetails({
           }`}
         >
           <GitPullRequest className="w-3.5 h-3.5" />
-          <span>Security Fix Impact Advisor</span>
+          <span>Fix Impact Advisor</span>
         </button>
         <button
           onClick={() => setActiveTab('diff')}
@@ -159,6 +173,13 @@ export default function FindingDetails({
           Before / After Diff
         </button>
       </div>
+
+      {/* Tab 0: Visual Security Explainer */}
+      {activeTab === 'visual' && (
+        <div className="flex-1 overflow-y-auto p-4">
+          <VisualSecurityExplainer finding={finding} />
+        </div>
+      )}
 
       {/* Tab 1: Remediation & Evidence */}
       {activeTab === 'remediation' && (

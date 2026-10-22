@@ -1,241 +1,248 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ShieldAlert, 
-  AlertTriangle, 
-  FileCode2, 
-  History, 
-  ArrowRight, 
-  Play, 
-  GitFork, 
-  Sparkles, 
-  Zap, 
-  CheckCircle2, 
-  TrendingDown,
-  Terminal,
-  Activity,
-  Database,
-  Layers,
-  FolderGit2
+import {
+  ArrowRight,
+  CircleCheck,
+  CircleDot,
+  FileWarning,
+  GitFork,
+  ScanLine,
+  Shield,
+  ShieldAlert
 } from 'lucide-react';
-import StatCard from '../components/StatCard';
-import FindingsTable from '../components/FindingsTable';
-import { fetchScanHistory } from '../services/api';
 
-export default function Dashboard({ 
-  findings, 
-  onSelectFinding, 
-  creditsBudget, 
-  onOpenOptimizer, 
+const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+const severityStyles = {
+  Critical: 'bg-rose-50 text-rose-700 ring-rose-200',
+  High: 'bg-orange-50 text-orange-700 ring-orange-200',
+  Medium: 'bg-amber-50 text-amber-700 ring-amber-200',
+  Low: 'bg-blue-50 text-blue-700 ring-blue-200'
+};
+
+export default function Dashboard({
+  findings = [],
+  onSelectFinding,
   isLiveScan = false,
-  targetProject = "user_service.py"
+  targetProject = 'Project'
 }) {
   const navigate = useNavigate();
-  const [recentScans, setRecentScans] = useState([]);
-  const [isLiveDB, setIsLiveDB] = useState(false);
+  const counts = findings.reduce((result, finding) => {
+    const severity = finding.severity in severityOrder ? finding.severity : 'Low';
+    result[severity] += 1;
+    return result;
+  }, { Critical: 0, High: 0, Medium: 0, Low: 0 });
+  const total = findings.length;
+  const reviewCount = counts.Critical + counts.High;
+  const orderedFindings = [...findings].sort(
+    (first, second) => (severityOrder[first.severity] ?? 4) - (severityOrder[second.severity] ?? 4)
+  );
+  const chartSegments = [
+    { name: 'Critical', color: '#dc2626', count: counts.Critical },
+    { name: 'High', color: '#ea580c', count: counts.High },
+    { name: 'Medium', color: '#d97706', count: counts.Medium },
+    { name: 'Low', color: '#2563eb', count: counts.Low }
+  ];
+  const chartStyle = {
+    background: total
+      ? `conic-gradient(${chartSegments.map((segment, index) => {
+          const previous = chartSegments
+            .slice(0, index)
+            .reduce((sum, item) => sum + item.count, 0);
+          const start = (previous / total) * 100;
+          const end = ((previous + segment.count) / total) * 100;
+          return `${segment.color} ${start}% ${end}%`;
+        }).join(', ')})`
+      : 'conic-gradient(#e2e8f0 0% 100%)'
+  };
 
-  useEffect(() => {
-    async function loadScans() {
-      const res = await fetchScanHistory();
-      setRecentScans(res.history?.slice(0, 3) || []);
-      setIsLiveDB(res.isLive || false);
-    }
-    loadScans();
-  }, []);
-
-  const criticalCount = findings.filter(f => f.severity === 'Critical').length;
-  const highCount = findings.filter(f => f.severity === 'High').length;
-  const mediumCount = findings.filter(f => f.severity === 'Medium').length;
-  const lowCount = findings.filter(f => f.severity === 'Low').length;
+  const openFinding = (finding) => {
+    onSelectFinding?.(finding);
+    navigate('/findings');
+  };
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
-      {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 p-6 rounded-2xl border border-slate-800 shadow-xl">
+    <div className="mx-auto max-w-7xl space-y-7 p-5 md:p-8">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium">
-              <Activity className="w-3.5 h-3.5" />
-              <span>Developer Security & Blast Radius Console</span>
-            </div>
-            <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
-              isLiveScan 
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
-                : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-            }`}>
-              {isLiveScan ? 'Live AST Analysis' : 'Sample Security Dataset'}
-            </span>
-          </div>
-
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            Target: <span className="font-mono text-cyan-300">{targetProject}</span>
+          <p className="text-sm font-medium text-slate-500">Security overview</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+            {targetProject}
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
-            Identified <span className="text-red-400 font-semibold">{criticalCount} critical</span> and <span className="text-amber-400 font-semibold">{highCount} high</span> severity risks across AST security patterns. Graphify caller and dependency impact chains mapped.
-          </p>
         </div>
+        <button
+          onClick={() => navigate('/scan')}
+          className="inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-600 focus:ring-offset-2"
+        >
+          <ScanLine className="h-4 w-4" />
+          Scan a project
+        </button>
+      </header>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/scan')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs shadow-lg shadow-cyan-500/25 transition"
-          >
-            <Play className="w-4 h-4 fill-white" />
-            <span>Scan Project</span>
-          </button>
-          <button
-            onClick={() => navigate('/impact')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition"
-          >
-            <GitFork className="w-4 h-4 text-purple-400" />
-            <span>Explore Graph</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Findings"
-          value={findings.length}
-          change={isLiveScan ? "Live AST" : "Sample Data"}
-          icon={ShieldAlert}
-          colorScheme="blue"
-          subtitle="Identified against OWASP Top 10 rules"
-          onClick={() => navigate('/findings')}
-        />
-        <StatCard
-          title="Critical / High Risk"
-          value={`${criticalCount + highCount}`}
-          change={`${criticalCount} Critical`}
-          icon={AlertTriangle}
-          colorScheme="red"
-          subtitle="Direct injection sinks or exposed secrets"
-          onClick={() => navigate('/findings')}
-        />
-        <StatCard
-          title="Total Scans Logged"
-          value={recentScans.length}
-          change={isLiveDB ? "SQLite DB" : "Demo Data"}
-          icon={History}
-          colorScheme="purple"
-          subtitle="Stored in persistent scan history"
-          onClick={() => navigate('/history')}
-        />
-        <StatCard
-          title="Kimi AI Advice"
-          value={creditsBudget?.model || 'kimi-k3'}
-          change={`${creditsBudget?.callsMade || 0} calls`}
-          icon={Zap}
-          colorScheme="emerald"
-          subtitle="On-demand evidence grounded reasoning"
-          onClick={onOpenOptimizer}
-        />
-      </div>
-
-      {/* Two Column Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: High Priority Findings */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-red-400" />
-              <span>Prioritized Security Findings</span>
-            </h2>
-            <button
-              onClick={() => navigate('/findings')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium transition"
-            >
-              <span>View all findings ({findings.length})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <FindingsTable
-            findings={findings.slice(0, 4)}
-            onSelectFinding={onSelectFinding}
-            isDemoMode={!isLiveScan}
-          />
-        </div>
-
-        {/* Right 1 Col: Recent Scans & Architecture Widget */}
-        <div className="space-y-6">
-          {/* Recent Scans Widget */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 shadow-xl">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h3 className="font-semibold text-white text-xs flex items-center gap-2">
-                <History className="w-4 h-4 text-cyan-400" />
-                <span>Recent Audit Trail</span>
-              </h3>
-              <button
-                onClick={() => navigate('/history')}
-                className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium"
-              >
-                View all
-              </button>
+      <section className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className={`rounded-2xl border p-6 md:p-8 ${
+          reviewCount
+            ? 'border-orange-200 bg-gradient-to-br from-white to-orange-50'
+            : 'border-emerald-200 bg-gradient-to-br from-white to-emerald-50'
+        }`}>
+          <div className="flex items-start gap-4">
+            <div className={`rounded-2xl p-3 ${
+              reviewCount ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {reviewCount
+                ? <ShieldAlert className="h-7 w-7" />
+                : <Shield className="h-7 w-7" />}
             </div>
-
-            <div className="space-y-2">
-              {recentScans.length === 0 ? (
-                <p className="text-xs text-slate-500 py-3 text-center">No scans recorded yet.</p>
-              ) : (
-                recentScans.map((s, idx) => (
-                  <div 
-                    key={idx}
-                    onClick={() => navigate('/history')}
-                    className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition cursor-pointer flex items-center justify-between text-xs"
-                  >
-                    <div className="truncate max-w-[170px]">
-                      <div className="font-medium text-slate-200 truncate">{s.target || s.target_name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{s.timestamp?.split(' ')[0]}</div>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-mono text-red-400 font-bold">{s.critical || 0} crit</span>
-                      <div className="text-[10px] text-slate-400 font-mono">{s.totalFindings || 0} total</div>
-                    </div>
-                  </div>
-                ))
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-semibold text-slate-900">
+                  {reviewCount ? 'Review needed' : total ? 'No high-risk issues found' : 'No scan yet'}
+                </h2>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  isLiveScan ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {isLiveScan ? 'Latest scan' : 'Sample data'}
+                </span>
+              </div>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                {reviewCount
+                  ? `${reviewCount} critical or high-severity ${reviewCount === 1 ? 'finding needs' : 'findings need'} attention. Review the affected code before release.`
+                  : total
+                    ? 'No critical or high-severity findings in this scan. Review remaining items as part of your normal workflow.'
+                    : 'Start a scan to see security findings and code relationships for your project.'}
+              </p>
+              {reviewCount > 0 && (
+                <button
+                  onClick={() => navigate('/findings')}
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-cyan-800 hover:text-cyan-950"
+                >
+                  Review findings <ArrowRight className="h-4 w-4" />
+                </button>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Three-Tier Analysis Architecture */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 shadow-xl text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="font-semibold text-slate-200">Three-Stage Analysis Engine</span>
-              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                Active
-              </span>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Finding severity</h2>
+              <p className="mt-1 text-xs text-slate-500">Distribution from this scan</p>
             </div>
-
-            <div className="space-y-2.5 text-[11px]">
-              <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                <div className="font-semibold text-slate-200 flex items-center gap-1.5">
-                  <Terminal className="w-3.5 h-3.5 text-blue-400" />
-                  <span>1. Static Scanner (AST / Semgrep)</span>
-                </div>
-                <p className="text-slate-400 mt-1">Discovers dangerous code sinks with start/end lines.</p>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-slate-950 border border-purple-500/30">
-                <div className="font-semibold text-purple-300 flex items-center gap-1.5">
-                  <GitFork className="w-3.5 h-3.5 text-purple-400" />
-                  <span>2. Graphify Knowledge Graph</span>
-                </div>
-                <p className="text-purple-300/80 mt-1">Traces caller and dependency blast radius across modules.</p>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-slate-950 border border-cyan-500/30">
-                <div className="font-semibold text-cyan-300 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>3. Kimi AI Reasoning</span>
-                </div>
-                <p className="text-cyan-300/80 mt-1">Explains risks, proposes fixes, and reviews impact.</p>
+            <span className="text-sm font-medium text-slate-600">{total} total</span>
+          </div>
+          <div className="mt-5 flex items-center gap-6">
+            <div
+              className="relative h-28 w-28 shrink-0 rounded-full"
+              style={chartStyle}
+              role="img"
+              aria-label={`Finding severity distribution: ${counts.Critical} critical, ${counts.High} high, ${counts.Medium} medium, ${counts.Low} low`}
+            >
+              <div className="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-white">
+                <span className="text-2xl font-semibold text-slate-900">{total}</span>
+                <span className="text-[11px] text-slate-500">findings</span>
               </div>
             </div>
+            <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-3">
+              {chartSegments.map(({ name, color, count }) => (
+                <li key={name} className="flex items-center gap-2 text-sm">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="text-slate-600">{name}</span>
+                  <span className="ml-auto font-semibold tabular-nums text-slate-900">{count}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Finding counts">
+        {[
+          { label: 'Critical', count: counts.Critical, icon: ShieldAlert, tone: 'text-rose-700 bg-rose-50' },
+          { label: 'High', count: counts.High, icon: FileWarning, tone: 'text-orange-700 bg-orange-50' },
+          { label: 'Other', count: counts.Medium + counts.Low, icon: CircleDot, tone: 'text-slate-700 bg-slate-100' }
+        ].map(({ label, count, icon: Icon, tone }) => (
+          <button
+            key={label}
+            onClick={() => navigate('/findings')}
+            className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md"
+          >
+            <span className={`rounded-xl p-3 ${tone}`}><Icon className="h-5 w-5" /></span>
+            <span className="min-w-0">
+              <span className="block text-sm text-slate-500">{label}</span>
+              <span className="mt-1 block text-2xl font-semibold tabular-nums text-slate-900">{count}</span>
+            </span>
+            <ArrowRight className="ml-auto h-4 w-4 text-slate-400" />
+          </button>
+        ))}
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1fr_0.7fr]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div>
+              <h2 className="font-semibold text-slate-900">Issues to review</h2>
+              <p className="mt-1 text-xs text-slate-500">Highest severity first</p>
+            </div>
+            <button
+              onClick={() => navigate('/findings')}
+              className="inline-flex items-center gap-1 text-sm font-medium text-cyan-800 hover:text-cyan-950"
+            >
+              All findings <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+          {orderedFindings.length ? (
+            <ul className="divide-y divide-slate-100">
+              {orderedFindings.slice(0, 4).map((finding) => (
+                <li key={finding.id}>
+                  <button
+                    onClick={() => openFinding(finding)}
+                    className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-slate-50"
+                  >
+                    <span className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+                      severityStyles[finding.severity] || severityStyles.Low
+                    }`}>
+                      {finding.severity}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-slate-900">
+                        {finding.title}
+                      </span>
+                      <span className="mt-1 block truncate font-mono text-xs text-slate-500">
+                        {finding.file}{finding.line ? `:${finding.line}` : ''}
+                      </span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="px-5 py-10 text-center">
+              <CircleCheck className="mx-auto h-8 w-8 text-emerald-600" />
+              <p className="mt-3 text-sm font-medium text-slate-800">No findings yet</p>
+              <p className="mt-1 text-sm text-slate-500">Run a scan to populate this overview.</p>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => navigate('/impact')}
+          className="group flex min-h-52 flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <span className="rounded-xl bg-cyan-50 p-3 text-cyan-800">
+              <GitFork className="h-5 w-5" />
+            </span>
+            <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-1 group-hover:text-cyan-800" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-slate-900">Explore code relationships</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              See how flagged code connects to the rest of your project.
+            </p>
+          </div>
+        </button>
+      </section>
     </div>
   );
 }

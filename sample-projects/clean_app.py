@@ -49,3 +49,4 @@ def restore_session(raw_payload: bytes):
     # Safe structured JSON parser
     data = json.loads(raw_payload.decode("utf-8"))
     return {"session": data}
+
