@@ -1,6 +1,6 @@
 # CodeShield AI 🛡️⚡
 > **Developer Security & Change-Impact Console**  
-> Powered by Static AST Scanning, Graphify Code Knowledge Graphs, and DigitalOcean Serverless AI Inference.
+> Powered by Static AST Scanning, Graphify Code Knowledge Graphs, and Kimi or DigitalOcean AI inference.
 
 ---
 
@@ -9,8 +9,8 @@
 **CodeShield AI** bridges the gap between vulnerability detection and actionable architectural remediation. Rather than overwhelming developers with isolated lists of file warnings, CodeShield AI:
 1. **Detects High-Risk Flaws**: Identifies SQL injections, command execution sinks, hardcoded credentials, and insecure deserialization using static AST and Semgrep pattern matching.
 2. **Maps Downstream Blast Radius via Graphify**: Traces calling controllers, middleware filters, and database dependencies so you immediately see which routes expose the vulnerability.
-3. **Explains & Fixes with DigitalOcean AI**: Grounds remediation in scanner evidence using DigitalOcean's Serverless Inference API (supporting **Kimi K3** and **Llama 4 Maverick**).
-4. **Optimizes Cloud Credits**: Enforces strict on-demand inference, SHA-256 deduplication caching, and session token budgeting to protect limited DigitalOcean credits.
+3. **Explains & Fixes with AI**: Grounds remediation in scanner evidence using the Kimi/Moonshot API or DigitalOcean Serverless Inference.
+4. **Optimizes API Usage**: Enforces strict on-demand inference, SHA-256 deduplication caching, and a per-scan call limit.
 
 ---
 
@@ -30,7 +30,7 @@ flowchart TD
         Scanner & Graphify -->|Correlate Finding to Sinks & Callers| Impact["Impact Analysis Service"]
         Impact -->|User clicks 'Explain with AI'| Cache{"SHA-256 Cache?"}
         Cache -->|Hit| CachedFix["Cached Zero-Credit Response"]
-        Cache -->|Miss & Budget OK| DOInference["DigitalOcean Serverless Inference (kimi-k3)"]
+        Cache -->|Miss & configured key| AIInference["Kimi API or DigitalOcean Inference"]
         Cache -->|Offline / No Key| Fallback["Deterministic Security Heuristic"]
     end
     
@@ -40,17 +40,17 @@ flowchart TD
 
 ---
 
-## 💰 DigitalOcean Credit Optimization Guarantee
+## 💰 AI Usage Safeguards
 
-DigitalOcean AI Inference is a central component, but we protect your account credits with rigorous safeguards:
+AI explanations are user-triggered and protected with caching and request limits:
 
 | Safeguard | How It Works | Credit Impact |
 | :--- | :--- | :--- |
-| **On-Demand Triggering** | Bulk scans do not invoke AI automatically. Users click **Explain with AI** only on findings needing reasoning. | Saves **~80-90%** of calls |
-| **SHA-256 Response Cache** | Queries are hashed by finding rule, file, line, and code context. Re-running scans costs **0 tokens**. | **100% free** re-runs |
-| **Concise Grounded Prompts** | Prompts send only the affected code slice and scanner evidence with strict output limits (max 500 tokens). | Saves **~60%** input tokens |
-| **Token Budget Slider** | Users set a session token limit (e.g. 5,000 tokens) in the Credit Optimizer modal. | Prevents runaway usage |
-| **Graceful Zero-Credit Fallback** | If credits deplete or no API key is provided, a deterministic security engine generates fixes with 0 crashes. | **100% uptime** |
+| **On-Demand Triggering** | Bulk scans do not invoke AI automatically. Users click **Explain with AI** only on findings needing reasoning. | Avoids unnecessary calls |
+| **SHA-256 Response Cache** | Queries are hashed by finding rule, file, line, code context, provider, and model. | Cached requests consume no additional API tokens |
+| **Concise Grounded Prompts** | Prompts send only affected code context and scanner evidence with strict output limits. | Limits prompt and response size |
+| **Per-Scan Call Limit** | The backend caps automated explanations per scan. | Helps limit usage |
+| **Local Fallback** | If no key is configured or an API request fails, a deterministic security heuristic provides a fallback. | No API call required |
 
 ---
 
@@ -84,12 +84,16 @@ uvicorn app.main:app --reload --port 8000
 
 ---
 
-### 3. Connect DigitalOcean Inference (Optional)
-In `backend/.env`:
+### 3. Configure Kimi API (Optional)
+The backend loads API keys from `backend/.env`. This file is ignored by Git and must never be copied into frontend code or committed. The repository includes `backend/.env.example` as a template. Add a rotated Kimi API key to `backend/.env`:
 ```env
-DIGITALOCEAN_INFERENCE_KEY=your_digitalocean_model_access_key
-DIGITALOCEAN_MODEL=kimi-k3
+MOONSHOT_API_KEY=your_rotated_kimi_api_key
+MOONSHOT_API_BASE_URL=https://api.moonshot.ai/v1
+MOONSHOT_MODEL=kimi-k3
 ```
+When both Kimi and DigitalOcean keys are configured, the backend uses Kimi. Otherwise it uses DigitalOcean if configured, or the local fallback. Restart the backend after changing `.env`.
+
+To use DigitalOcean instead, configure `DIGITALOCEAN_INFERENCE_KEY`, `DIGITALOCEAN_MODEL`, and `DIGITALOCEAN_INFERENCE_URL` in the same backend `.env` file.
 
 ---
 

@@ -217,3 +217,4 @@ export default function ScanForm({ onStartScan, isScanning }) {
     </form>
   );
 }
+

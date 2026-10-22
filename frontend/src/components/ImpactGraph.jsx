@@ -209,3 +209,4 @@ export default function ImpactGraph({ graphData, onSelectNode, selectedNodeId })
     </div>
   );
 }
+

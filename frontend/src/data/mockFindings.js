@@ -396,3 +396,4 @@ def create_access_token(data: dict):
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 `
 };
+

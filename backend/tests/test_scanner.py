@@ -1,5 +1,9 @@
+import asyncio
 import pytest
+from pydantic import SecretStr
 from pathlib import Path
+from app.config import settings
+from app.services import ai_service
 from app.services.scanner_service import scan_source
 from app.services.graphify_service import build_ast_relationship_graph
 from app.services.impact_service import map_findings_to_graph
@@ -36,3 +40,68 @@ def test_ai_heuristic_offline_fallback():
     assert "query" in res["explanation"].lower() or "sql" in res["explanation"].lower()
     assert res["tokens_used"] == 0
     assert res["cached"] is True
+
+
+def test_ai_explanation_uses_moonshot_key_on_server(monkeypatch):
+    calls = {}
+
+    class MockResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "choices": [{
+                    "message": {
+                        "content": '{"explanation":"Use a safe query.","suggested_fix":"parameterized"}'
+                    }
+                }],
+                "usage": {"total_tokens": 12}
+            }
+
+    class MockClient:
+        def __init__(self, timeout):
+            assert timeout == 15.0
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return False
+
+        async def post(self, url, json, headers):
+            calls.update(url=url, payload=json, headers=headers)
+            return MockResponse()
+
+    monkeypatch.setattr(settings, "moonshot_api_key", SecretStr("unit-test-secret"))
+    monkeypatch.setattr(settings, "moonshot_api_base_url", "https://api.moonshot.ai/v1")
+    monkeypatch.setattr(settings, "moonshot_model", "kimi-k3")
+    monkeypatch.setattr(settings, "digitalocean_inference_key", None)
+    monkeypatch.setattr(ai_service.httpx, "AsyncClient", MockClient)
+    ai_service._AI_RESPONSE_CACHE.clear()
+
+    result = asyncio.run(
+        ai_service.explain_finding(
+            {"id": "F-002", "ruleId": "test.rule", "recommendation": "safe fix"},
+            code="example",
+        )
+    )
+
+    assert calls["url"] == "https://api.moonshot.ai/v1/chat/completions"
+    assert calls["headers"]["Authorization"] == "Bearer unit-test-secret"
+    assert calls["payload"]["model"] == "kimi-k3"
+    assert result["source"] == "Kimi API (Moonshot AI)"
+    assert result["explanation"] == "Use a safe query."
+    assert result["tokens_used"] == 12
+
+
+def test_digitalocean_provider_remains_available(monkeypatch):
+    monkeypatch.setattr(settings, "moonshot_api_key", None)
+    monkeypatch.setattr(settings, "digitalocean_inference_key", SecretStr("do-test-secret"))
+
+    provider_config = ai_service._get_provider_config()
+
+    assert provider_config is not None
+    assert provider_config[1] == settings.digitalocean_inference_url
+    assert provider_config[2] == "DigitalOcean Inference"
+    assert provider_config[3] == settings.digitalocean_model

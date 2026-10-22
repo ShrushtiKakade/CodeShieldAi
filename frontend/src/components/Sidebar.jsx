@@ -134,3 +134,4 @@ export default function Sidebar({ backendStatus, onOpenOptimizer, creditsBudget 
     </aside>
   );
 }
+

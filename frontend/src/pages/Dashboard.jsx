@@ -191,3 +191,4 @@ export default function Dashboard({ findings, onSelectFinding, creditsBudget, on
     </div>
   );
 }
+

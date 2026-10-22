@@ -25,3 +25,4 @@ def test_scan_endpoint():
     assert data["status"] == "completed"
     assert len(data["findings"]) > 0
     assert data["summary"]["critical"] >= 1
+

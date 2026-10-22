@@ -82,3 +82,4 @@ export default function ImpactAnalysis({ graphData, onSelectFinding }) {
     </div>
   );
 }
+

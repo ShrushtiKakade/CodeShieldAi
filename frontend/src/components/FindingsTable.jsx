@@ -190,3 +190,4 @@ export default function FindingsTable({ findings = [], onSelectFinding, selected
     </div>
   );
 }
+

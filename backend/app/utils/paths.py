@@ -8,3 +8,4 @@ UPLOADS_DIR = BASE_DIR / "uploads"
 # Ensure directories exist
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+

@@ -88,3 +88,4 @@ export default function NewScan({ onRunScan, isScanning, lastScanResult, onSelec
     </div>
   );
 }
+

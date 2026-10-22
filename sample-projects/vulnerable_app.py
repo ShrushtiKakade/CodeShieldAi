@@ -68,3 +68,4 @@ def hash_user_password(password: str):
 if __name__ == "__main__":
     # 6. DEBUG MODE ENABLED IN PRODUCTION
     app.run(host="0.0.0.0", port=8000, debug=True)
+

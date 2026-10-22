@@ -7,7 +7,7 @@ class ScanRequest(BaseModel):
     source_code: str = Field(min_length=1, max_length=500000)
     include_impact: bool = True
     include_ai_explanation: bool = False
-    model: Optional[str] = "kimi-k3"
+    model: Optional[str] = None
 
 
 class Finding(BaseModel):
@@ -78,7 +78,7 @@ class ScanResponse(BaseModel):
 class AiExplainRequest(BaseModel):
     finding: Dict[str, Any]
     source_code: Optional[str] = ""
-    model: Optional[str] = "kimi-k3"
+    model: Optional[str] = None
 
 
 class AiExplainResponse(BaseModel):
@@ -88,4 +88,4 @@ class AiExplainResponse(BaseModel):
     model_used: str
     tokens_used: int = 0
     cached: bool = False
-    source: str = "DigitalOcean Serverless Inference"
+    source: str = "AI inference"

@@ -16,14 +16,14 @@ def generate_cache_key(finding: Dict[str, Any], code: str, model: str, provider:
 
 
 def _get_provider_config() -> Optional[Tuple[str, str, str, str]]:
-    if settings.moonshot_configured:
+    if settings.moonshot_api_key is not None and settings.moonshot_configured:
         return (
             settings.moonshot_api_key.get_secret_value(),
             f"{settings.moonshot_api_base_url.rstrip('/')}/chat/completions",
             "Kimi API (Moonshot AI)",
             settings.moonshot_model,
         )
-    if settings.digitalocean_configured:
+    if settings.digitalocean_inference_key is not None and settings.digitalocean_configured:
         return (
             settings.digitalocean_inference_key.get_secret_value(),
             settings.digitalocean_inference_url,
@@ -74,6 +74,7 @@ Respond strictly in valid JSON format with two keys:
         "Content-Type": "application/json"
     }
 
+    headers["Authorization"] = f"Bearer {key}"
     payload = {
         "model": selected_model,
         "messages": [
@@ -92,49 +93,50 @@ Respond strictly in valid JSON format with two keys:
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(settings.digitalocean_inference_url, json=payload, headers=headers)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                content = data["choices"][0]["message"]["content"].strip()
-                tokens_used = data.get("usage", {}).get("total_tokens", 220)
+            resp = await client.post(endpoint, json=payload, headers=headers)
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        logger.warning("%s returned HTTP %s", provider_name, exc.response.status_code)
+        return get_heuristic_explanation(
+            finding, code, selected_model, reason=f"AI API HTTP {exc.response.status_code}"
+        )
+    except httpx.HTTPError as exc:
+        logger.warning("%s request failed: %s", provider_name, type(exc).__name__)
+        return get_heuristic_explanation(finding, code, selected_model, reason="AI API request failed")
 
-                # Parse JSON output from model
-                try:
-                    # Clean potential markdown fences ```json ... ```
-                    clean_content = content
-                    if "```json" in clean_content:
-                        clean_content = clean_content.split("```json")[1].split("```")[0].strip()
-                    elif "```" in clean_content:
-                        clean_content = clean_content.split("```")[1].split("```")[0].strip()
-                    parsed = json.loads(clean_content)
-                    explanation = parsed.get("explanation", content)
-                    suggested_fix = parsed.get("suggested_fix", finding.get("recommendation", ""))
-                except Exception:
-                    explanation = content
-                    suggested_fix = finding.get("recommendation", "")
+    try:
+        data = resp.json()
+        if not isinstance(data, dict):
+            raise ValueError("Response body must be an object")
+        content = data["choices"][0]["message"]["content"].strip()
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+        logger.warning("%s returned an invalid chat completion response", provider_name)
+        return get_heuristic_explanation(finding, code, selected_model, reason="Invalid AI API response")
 
-                result = {
-                    "finding_id": finding.get("id"),
-                    "explanation": explanation,
-                    "suggested_fix": suggested_fix,
-                    "model_used": f"{selected_model} (DigitalOcean Inference)",
-                    "tokens_used": tokens_used,
-                    "cached": False,
-                    "source": "DigitalOcean Serverless Inference"
-                }
+    usage = data.get("usage")
+    tokens_used = usage.get("total_tokens", 220) if isinstance(usage, dict) else 220
+    clean_content = content
+    if "```json" in clean_content:
+        clean_content = clean_content.split("```json", 1)[1].split("```", 1)[0].strip()
+    elif "```" in clean_content:
+        clean_content = clean_content.split("```", 1)[1].split("```", 1)[0].strip()
 
-                # Store in cache
-                _AI_RESPONSE_CACHE[cache_key] = result
-                return result
+    try:
+        parsed = json.loads(clean_content)
+    except json.JSONDecodeError:
+        parsed = {}
 
-            else:
-                print(f"DigitalOcean API returned status {resp.status_code}: {resp.text}")
-                return get_heuristic_explanation(finding, code, selected_model, reason=f"DO API HTTP {resp.status_code}")
-
-    except Exception as e:
-        print(f"DigitalOcean Inference call failed: {e}")
-        return get_heuristic_explanation(finding, code, selected_model, reason=str(e))
+    result = {
+        "finding_id": finding.get("id"),
+        "explanation": parsed.get("explanation", content),
+        "suggested_fix": parsed.get("suggested_fix", finding.get("recommendation", "")),
+        "model_used": f"{selected_model} ({provider_name})",
+        "tokens_used": tokens_used,
+        "cached": False,
+        "source": provider_name
+    }
+    _AI_RESPONSE_CACHE[cache_key] = result
+    return result
 
 
 def get_heuristic_explanation(finding: Dict[str, Any], code: str, model: str, reason: str = "") -> Dict[str, Any]:
@@ -165,7 +167,7 @@ def get_heuristic_explanation(finding: Dict[str, Any], code: str, model: str, re
         "finding_id": finding.get("id"),
         "explanation": explanation,
         "suggested_fix": suggested_fix,
-        "model_used": f"{model} [Local Heuristic - 0 Credits Consumed]",
+        "model_used": f"{model} [Local Heuristic - 0 API tokens]",
         "tokens_used": 0,
         "cached": True,
         "source": f"Local Fallback ({reason})" if reason else "Local Grounded Engine"

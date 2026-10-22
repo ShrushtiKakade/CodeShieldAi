@@ -206,3 +206,4 @@ def get_default_structural_graph() -> Dict[str, Any]:
             }
         ]
     }
+

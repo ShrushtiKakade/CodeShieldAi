@@ -158,3 +158,4 @@ function simulateLocalScan(sourceCode, language, includeImpact) {
     isDemo: true
   };
 }
+

@@ -46,3 +46,4 @@ def map_findings_to_graph(findings: List[Dict[str, Any]], graph: Dict[str, Any])
                 break
 
     return {"nodes": nodes, "edges": edges}
+

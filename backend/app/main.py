@@ -5,7 +5,7 @@ from app.config import settings
 
 app = FastAPI(
     title="CodeShield AI API",
-    description="Code security, Graphify blast radius, and DigitalOcean AI Inference API",
+    description="Code security, Graphify blast radius, and Kimi/DigitalOcean AI inference",
     version="0.1.0",
 )
 

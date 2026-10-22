@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from app.utils.paths import WORKSPACE_DIR
 from app.security.file_safety import (
@@ -19,7 +19,7 @@ async def run_scan(
     language: str = "python",
     include_impact: bool = True,
     include_ai_explanation: bool = False,
-    model: str = "kimi-k3"
+    model: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Coordinates the complete CodeShield AI workflow:
@@ -27,7 +27,7 @@ async def run_scan(
     2. Static security vulnerability scanning (AST / Semgrep)
     3. Structural relationship mapping (Graphify)
     4. Blast radius impact analysis
-    5. On-demand DigitalOcean AI explanation
+    5. On-demand AI explanation
     """
     # 1. Validation
     validate_source_code(source_code)

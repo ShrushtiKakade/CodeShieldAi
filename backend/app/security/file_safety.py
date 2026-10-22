@@ -45,3 +45,4 @@ def cleanup_safe_workspace(workspace_path: Path) -> None:
     except Exception as e:
         # Avoid crashing scan responses if cleanup fails
         print(f"Warning: Failed to cleanup workspace {workspace_path}: {e}")
+
