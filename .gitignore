@@ -1,0 +1,24 @@
+# Node / Frontend
+node_modules/
+dist/
+.env.local
+*.log
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+.pytest_cache/
+.coverage
+htmlcov/
+.semgrep/
+graphify-out/
+uploads/
+temp_workspaces/
+
+# System / OS
+.DS_Store
+Thumbs.db
