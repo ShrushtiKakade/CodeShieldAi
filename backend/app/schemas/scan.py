@@ -11,6 +11,15 @@ class ScanRequest(BaseModel):
     model: Optional[str] = "kimi-k3"
 
 
+class GithubScanRequest(BaseModel):
+    repo_url: str = Field(min_length=10, max_length=500, description="GitHub repository URL, e.g. https://github.com/owner/repo")
+    branch: Optional[str] = "main"
+    github_token: Optional[str] = None
+    include_impact: bool = True
+    include_ai_explanation: bool = False
+    model: Optional[str] = "kimi-k3"
+
+
 class Finding(BaseModel):
     id: str
     title: str

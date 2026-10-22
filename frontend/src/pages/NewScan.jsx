@@ -14,6 +14,7 @@ import ScanForm from '../components/ScanForm';
 export default function NewScan({ 
   onRunScan, 
   onUploadScan, 
+  onGithubScan,
   isScanning, 
   lastScanResult, 
   onSelectFinding,
@@ -29,7 +30,7 @@ export default function NewScan({
           <span>New Security & Impact Scan</span>
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Paste Python code, select a vulnerability preset, or upload a project file/archive (.zip).
+          Connect a GitHub repository, upload a project archive (.zip), or inspect code directly.
           Code is analyzed statically in an isolated temporary workspace and never executed.
         </p>
       </div>
@@ -38,6 +39,7 @@ export default function NewScan({
       <ScanForm 
         onStartScan={onRunScan} 
         onUploadScan={onUploadScan}
+        onGithubScan={onGithubScan}
         isScanning={isScanning} 
         onCancelScan={onCancelScan}
       />

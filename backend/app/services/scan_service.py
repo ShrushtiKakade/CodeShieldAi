@@ -14,6 +14,7 @@ from app.services.scanner_service import scan_source_workspace
 from app.services.graphify_service import analyze_repository
 from app.services.impact_service import map_findings_to_graph
 from app.services.ai_service import explain_finding
+from app.services.github_service import download_github_repository
 from app.storage.db import save_scan
 from app.config import settings
 
@@ -21,6 +22,9 @@ from app.config import settings
 async def run_scan(
     source_code: Optional[str] = None,
     archive_path: Optional[Path] = None,
+    repo_url: Optional[str] = None,
+    branch: Optional[str] = None,
+    github_token: Optional[str] = None,
     target_name: str = "target_source.py",
     language: str = "python",
     include_impact: bool = True,
@@ -30,7 +34,7 @@ async def run_scan(
     """
     Coordinates the CodeShield AI scanning pipeline:
     1. Isolated workspace creation
-    2. Input extraction (archive or source string)
+    2. Input extraction (GitHub repo clone, archive, or source string)
     3. Static vulnerability analysis
     4. Graphify structural code mapping
     5. Impact propagation
@@ -41,9 +45,20 @@ async def run_scan(
     workspace_path, scan_id = create_safe_workspace(WORKSPACE_DIR)
 
     files_scanned = 1
+    display_target = target_name
+
     try:
         # Step 1: Populate isolated workspace
-        if archive_path and archive_path.exists():
+        if repo_url:
+            display_target = repo_url
+            extracted = await download_github_repository(
+                repo_url=repo_url,
+                branch=branch,
+                token=github_token,
+                workspace_path=workspace_path
+            )
+            files_scanned = max(1, len(extracted))
+        elif archive_path and archive_path.exists():
             extracted = extract_safe_archive(archive_path, workspace_path)
             files_scanned = max(1, len(extracted))
         elif source_code:
@@ -51,7 +66,7 @@ async def run_scan(
             target_file = workspace_path / target_name
             target_file.write_text(source_code, encoding="utf-8")
         else:
-            raise ValueError("No source code or archive provided for scanning.")
+            raise ValueError("No source code, archive, or repository provided for scanning.")
 
         # Step 2: Static security vulnerability detection
         raw_findings = scan_source_workspace(workspace_path)
@@ -90,7 +105,7 @@ async def run_scan(
             "scan_id": scan_id,
             "id": scan_id,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "target_name": target_name,
+            "target_name": display_target,
             "language": language,
             "status": "completed",
             "duration_ms": duration_ms,

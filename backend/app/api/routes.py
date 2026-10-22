@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 
 from app.schemas.scan import (
     ScanRequest, 
+    GithubScanRequest,
     ScanResponse, 
     ScanHistoryItem,
     AiExplainRequest, 
@@ -14,6 +15,7 @@ from app.schemas.scan import (
 )
 from app.services.scan_service import run_scan
 from app.services.ai_service import explain_finding, assess_fix_impact
+from app.services.github_service import get_github_repositories
 from app.storage.db import get_all_scans, get_scan, delete_scan
 from app.security.file_safety import SecurityViolation
 from app.utils.paths import UPLOADS_DIR
@@ -113,6 +115,40 @@ async def upload_and_scan(
                 os.remove(archive_path)
             except Exception:
                 pass
+
+
+@router.post("/scans/github", response_model=ScanResponse)
+async def scan_github_repository(request: GithubScanRequest):
+    """
+    Connect and scan a GitHub repository directly by URL.
+    Safely clones archive into an isolated sandbox, validates URL against SSRF, and analyzes statically.
+    """
+    try:
+        scan_result = await run_scan(
+            repo_url=request.repo_url,
+            branch=request.branch,
+            github_token=request.github_token,
+            target_name=request.repo_url,
+            language="python",
+            include_impact=request.include_impact,
+            include_ai_explanation=request.include_ai_explanation,
+            preferred_model=request.model or settings.digitalocean_model
+        )
+        return scan_result
+    except SecurityViolation as sv:
+        raise HTTPException(status_code=400, detail=str(sv))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"GitHub scan error: {str(e)}")
+
+
+@router.get("/github/repos")
+async def list_github_repositories(token: Optional[str] = None):
+    """
+    Returns available GitHub repositories for one-click import.
+    If GitHub Personal Access Token is supplied, retrieves user's repositories.
+    """
+    repos = await get_github_repositories(token)
+    return {"repositories": repos}
 
 
 @router.get("/scans/{scan_id}", response_model=ScanResponse)

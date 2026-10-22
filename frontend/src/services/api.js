@@ -34,6 +34,66 @@ export async function fetchScanHistory() {
   }
 }
 
+export async function fetchGithubRepos(token = '') {
+  try {
+    const url = token ? `${API_BASE}/github/repos?token=${encodeURIComponent(token)}` : `${API_BASE}/github/repos`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error('Failed to fetch repositories');
+    const data = await res.json();
+    return data.repositories || [];
+  } catch (err) {
+    return [
+      {
+        id: "cs-repo-1",
+        name: "CodeShieldAi",
+        full_name: "ShrushtiKakade/CodeShieldAi",
+        html_url: "https://github.com/ShrushtiKakade/CodeShieldAi",
+        description: "CodeShield AI - Source code security and change-impact analysis platform",
+        default_branch: "main",
+        private: false,
+        stars: 1,
+        language: "Python"
+      }
+    ];
+  }
+}
+
+export async function submitGithubScan({
+  repoUrl,
+  branch = 'main',
+  githubToken = '',
+  includeImpact = true,
+  includeAiExplanation = false,
+  model = 'kimi-k3',
+  abortSignal
+}) {
+  try {
+    const res = await fetch(`${API_BASE}/scans/github`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        repo_url: repoUrl,
+        branch,
+        github_token: githubToken || undefined,
+        include_impact: includeImpact,
+        include_ai_explanation: includeAiExplanation,
+        model
+      }),
+      signal: abortSignal || AbortSignal.timeout(30000)
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.detail || `Server returned HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    return { success: true, ...data, isLive: true };
+  } catch (err) {
+    throw err;
+  }
+}
+
 export async function submitScan({ 
   sourceCode, 
   targetName = 'target_source.py',

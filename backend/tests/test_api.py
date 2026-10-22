@@ -104,3 +104,23 @@ def get_user(db, username):
 
     # Confirm 404 after deletion
     assert client.get(f"/api/scans/{scan_id}").status_code == 404
+
+
+def test_github_repos_list():
+    res = client.get("/api/github/repos")
+    assert res.status_code == 200
+    data = res.json()
+    assert "repositories" in data
+    assert len(data["repositories"]) > 0
+    assert any("CodeShieldAi" in r["name"] for r in data["repositories"])
+
+
+def test_github_url_ssrf_rejection():
+    # Attempting to scan non-github or internal url must be rejected with HTTP 400
+    malicious_payload = {
+        "repo_url": "http://169.254.169.254/latest/meta-data/",
+        "branch": "main"
+    }
+    res = client.post("/api/scans/github", json=malicious_payload)
+    assert res.status_code == 400
+    assert "Invalid GitHub URL" in res.json()["detail"]

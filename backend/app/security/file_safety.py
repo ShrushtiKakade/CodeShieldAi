@@ -16,6 +16,35 @@ class SecurityViolation(Exception):
     pass
 
 
+def validate_github_url(url: str) -> Tuple[str, str]:
+    """
+    Strictly validates that a URL is a legitimate GitHub repository URL.
+    Prevents Server-Side Request Forgery (SSRF) against internal servers, localhost, or cloud metadata endpoints.
+    Returns (owner, repo_name).
+    """
+    if not url or not url.strip():
+        raise SecurityViolation("GitHub repository URL cannot be empty.")
+    
+    clean_url = url.strip()
+    # Match standard https://github.com/owner/repo or https://github.com/owner/repo.git
+    pattern = re.compile(
+        r'^https?://github\.com/([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+?)(?:\.git|/)?$',
+        re.IGNORECASE
+    )
+    match = pattern.match(clean_url)
+    if not match:
+        raise SecurityViolation(
+            "Invalid GitHub URL. Must be in the format 'https://github.com/owner/repository'."
+        )
+    
+    owner, repo = match.group(1), match.group(2)
+    # Reject path traversal tricks like ../
+    if ".." in owner or ".." in repo:
+        raise SecurityViolation("Invalid characters detected in repository name.")
+    
+    return owner, repo
+
+
 def validate_source_code(source: str) -> None:
     if not source or not source.strip():
         raise SecurityViolation("Source code cannot be empty.")

@@ -13,6 +13,7 @@ import {
   checkBackendHealth, 
   submitScan, 
   uploadAndScan, 
+  submitGithubScan,
   fetchScanById, 
   requestAiExplanation 
 } from './services/api';
@@ -95,6 +96,34 @@ export default function App() {
     } catch (err) {
       if (err.name !== 'AbortError') {
         alert(`Upload scan failed: ${err.message}`);
+      }
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleGithubScan = async ({ repoUrl, branch, githubToken, includeImpact, includeAiExplanation }) => {
+    setIsScanning(true);
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const result = await submitGithubScan({
+        repoUrl,
+        branch,
+        githubToken,
+        includeImpact,
+        includeAiExplanation,
+        model: creditsBudget.model,
+        abortSignal: abortControllerRef.current.signal
+      });
+
+      // Extract repository name or owner/repo for display
+      const match = repoUrl.match(/github\.com\/([^/]+\/[^/.]+)/);
+      const projectName = match ? match[1] : (result.target_name || repoUrl);
+      applyScanResult(result, projectName);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        alert(`GitHub repository scan failed: ${err.message}`);
       }
     } finally {
       setIsScanning(false);
@@ -236,6 +265,7 @@ export default function App() {
                   <NewScan
                     onRunScan={handleRunScan}
                     onUploadScan={handleUploadScan}
+                    onGithubScan={handleGithubScan}
                     isScanning={isScanning}
                     lastScanResult={lastScanResult}
                     onSelectFinding={setSelectedFinding}

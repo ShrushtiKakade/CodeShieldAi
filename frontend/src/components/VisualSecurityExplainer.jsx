@@ -647,3 +647,4 @@ function getExplainerData(finding) {
     ]
   };
 }
+
